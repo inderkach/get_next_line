@@ -50,25 +50,26 @@ char	*write_to_res(char *sadd, char *s)
 	return (sres);
 }
 
-int is_end(char *str)		//0 - '\0', 1 - '\n', 2 - no end (\0 при s[BUFF_SIZE]), -1 - ошибка
+int is_end(char *str, int check_read)		//0 - '\0', 1 - '\n', 2 - no end (\0 при s[BUFF_SIZE]), -1 - ошибка
 {
 	size_t	i;
 
 	i = 0;
 	if (str == NULL)
 		return (-1);
-	while (i < BUFFER_SIZE)
+	while (i < (size_t)check_read)
 	{
-		if (str[i] == '\0')
-		{
-			return (0);
-		}
-		else if (str[i] == '\n')
+		if (str[i] == '\n')
 		{
 			str[i] = '\0';
 			return (1);
 		}
 		i++;
+	}
+	if (check_read < BUFFER_SIZE)
+	{
+		str[check_read] = '\0';
+		return (0);
 	}
 	return (2);
 }
@@ -77,14 +78,12 @@ int get_next_line(int fd, char **line)
 {
 	char	*buff;
 	int 	checkbuf;
-	char	check_read;
+	int		check_read;
 	char	*res;
 
 	if (fd < 0 || line == NULL || BUFFER_SIZE <= 0 ||
 		(buff = malloc((BUFFER_SIZE + 1) * sizeof(char))) == NULL)
-		return (-1);
-	buff[BUFFER_SIZE] = '\0';
-	
+		return (-1);	
 	res = malloc(sizeof(char));
 	if (res == NULL)
 	{
@@ -102,11 +101,12 @@ int get_next_line(int fd, char **line)
 			free(res);
 			return (-1);
 		}
-		checkbuf = is_end(buff); // -1 - ошибка чтения, 0 - символов меньше BUFF_SIZE, 1 - найден \n, 2 - символов BUFF_SIZE (продолжение цикла)
+		buff[BUFFER_SIZE] = '\0';
+		checkbuf = is_end(buff, check_read); // -1 - ошибка чтения, 0 - символов меньше BUFF_SIZE, 1 - найден \n, 2 - символов BUFF_SIZE (продолжение цикла)
 		res = write_to_res(buff, res); // добавление buff в res (NULL - ошибка)
 		if (res == NULL)
 			checkbuf = -1;
-		printf("cb:%d - buff:%s\n", checkbuf, buff);
+	//	printf("cb:%d - buff:%s\n", checkbuf, buff);
 	}
 	*line = res;
 	free(buff);
