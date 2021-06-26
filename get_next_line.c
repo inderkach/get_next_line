@@ -18,63 +18,65 @@ size_t	ft_strlen(const char *s)
 	size_t	i;
 
 	i = 0;
-	while (*(s + i) != '\0')
+	while (*(s + i) != '\0' && *(s + i) != '\n')
 		i++;
 	return (i);
 }
 
-char	*ft_strjoin(char *s1, char *s2)
+char	*write_to_res(char *sadd, char *s)
 {
-	char	*joined;
-	size_t	ptr;
+	char	*sres;
+	size_t	i;
+	size_t	j;
 
-	if (s1 == NULL)
-		return (NULL);
-	ptr = 0;
-	joined = (char *)malloc(ft_strlen(s1) + ft_strlen(s2) + 1);
-	if (joined == 0)
-		return (NULL);
-	while (ptr < ft_strlen(s1))
+	sres = malloc(sizeof(char) * (ft_strlen(s) + ft_strlen(sadd) + 1));
+	if (sres)
 	{
-		*(joined + ptr) = *(s1 + ptr);
-		ptr++;
+		i = 0;
+		while (s[i] != '\0' && s[i] != '\n')
+		{	
+			sres[i] = s[i];
+			i++;
+		}
+		j = 0;
+		while (sadd[j] != '\0' && sadd[j] != '\n')
+		{
+			sres[i] = sadd[j];
+			i++;
+			j++;
+		}
 	}
-	ptr = 0;
-	while (ptr < ft_strlen(s2))
-	{
-		*(joined + ft_strlen(s1) + ptr) = *(s2 + ptr);
-		ptr++;
-	}
-	*(joined + ft_strlen(s1) + ft_strlen(s2)) = '\0';
-	return (joined);
+	free(s);
+	return (sres);
 }
 
-int is_end(char *str)		//1 - '\0', 2 - '\n', 0 - no end
+int is_end(char *str)		//0 - '\0', 1 - '\n', 2 - no end (\0 при s[BUFF_SIZE]), -1 - ошибка
 {
 	size_t	i;
 
 	i = 0;
-	while (i <= BUFFER_SIZE)
+	if (str == NULL)
+		return (-1);
+	while (i < BUFFER_SIZE)
 	{
 		if (str[i] == '\0')
 		{
-			return (1);
+			return (0);
 		}
 		else if (str[i] == '\n')
 		{
 			str[i] = '\0';
-			return (2);
+			return (1);
 		}
 		i++;
-		write(1, "1", 1);
 	}
-	return (0);
+	return (2);
 }
 
 int get_next_line(int fd, char **line)
 {
 	char	*buff;
-	int 	ret;
+	int 	checkbuf;
 	char	check_read;
 	char	*res;
 
@@ -90,8 +92,8 @@ int get_next_line(int fd, char **line)
 		return (-1);
 	}
 	*res = '\0';
-	ret = 2;
-	while (ret != 0 && ret != 1)
+	checkbuf = 2;
+	while (checkbuf == 2)
 	{
 		check_read = read(fd, buff, BUFFER_SIZE);
 		if (check_read == -1)
@@ -100,15 +102,13 @@ int get_next_line(int fd, char **line)
 			free(res);
 			return (-1);
 		}
-		ret = is_end(buff);
-		res = ft_strjoin(buff, res);
+		checkbuf = is_end(buff); // -1 - ошибка чтения, 0 - символов меньше BUFF_SIZE, 1 - найден \n, 2 - символов BUFF_SIZE (продолжение цикла)
+		res = write_to_res(buff, res); // добавление buff в res (NULL - ошибка)
 		if (res == NULL)
-		{
-			free(buff);
-			return (-1);
-		}
+			checkbuf = -1;
+		printf("cb:%d - buff:%s\n", checkbuf, buff);
 	}
 	*line = res;
 	free(buff);
-	return (ret);
+	return (checkbuf);
 }
