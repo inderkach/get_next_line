@@ -16,6 +16,11 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-int	get_next_line(int fd, char **line);
+int		get_next_line(int fd, char **line);
+char	*alloc(char **res);
+char	*ft_strjoin(char const *s1, char const *s2);
+size_t	ft_strlen(const char *s);
+int		check_n(char *s);
+char	*ft_strcpy(char *to, char *from, size_t length);
 
 #endif

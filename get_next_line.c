@@ -3,112 +3,96 @@
 /*                                                        :::      ::::::::   */
 /*   get_next_line.c                                    :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: fdanny <marvin@42.fr>                      +#+  +:+       +#+        */
+/*   By: fdanny <fdanny@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/06/25 15:57:30 by fdanny            #+#    #+#             */
-/*   Updated: 2021/06/25 15:57:32 by fdanny           ###   ########.fr       */
+/*   Updated: 2021/07/01 12:11:42 by fdanny           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-
 #include "get_next_line.h"
 
-size_t	ft_strlen(const char *s)
+char	*to_line(char *s)
 {
-	size_t	i;
+	char	*line;
+	size_t	n_s;
 
-	i = 0;
-	while (*(s + i) != '\0' && *(s + i) != '\n')
-		i++;
-	return (i);
+	n_s = (size_t)check_n(s);
+	line = malloc(sizeof(char) * n_s);
+	line = ft_strcpy(line, s, n_s);
+	line[n_s] = '\0';
+	return (line);
 }
 
-char	*write_to_res(char *sadd, char *s)
+char	*to_next_line(char *s)
 {
-	char	*sres;
 	size_t	i;
-	size_t	j;
+	size_t	length;
+	char	*new;
 
-	sres = malloc(sizeof(char) * (ft_strlen(s) + ft_strlen(sadd) + 1));
-	if (sres)
-	{
-		i = 0;
-		while (s[i] != '\0' && s[i] != '\n')
-		{	
-			sres[i] = s[i];
-			i++;
-		}
-		j = 0;
-		while (sadd[j] != '\0' && sadd[j] != '\n')
-		{
-			sres[i] = sadd[j];
-			i++;
-			j++;
-		}
-	}
+	i = (size_t)check_n(s) + 1;
+	length = 0;
+	while (s[i + length] != '\0')
+		length++;
+	new = malloc(sizeof(char) * (length + 1));
+	new = ft_strcpy(new, (s + i), length + 1);
 	free(s);
-	return (sres);
+	return (new);
 }
 
-int is_end(char *str, int check_read)		//0 - '\0', 1 - '\n', 2 - no end (\0 при s[BUFF_SIZE]), -1 - ошибка
+int	read_line(int fd, char *buff, char **res)
 {
-	size_t	i;
+	int		reader;
+	char	*newres;
 
-	i = 0;
-	if (str == NULL)
-		return (-1);
-	while (i < (size_t)check_read)
+	*res = alloc(res);
+	
+	if (*res != NULL)
 	{
-		if (str[i] == '\n')
+		reader = BUFFER_SIZE;
+		while (reader == BUFFER_SIZE)
 		{
-			str[i] = '\0';
-			return (1);
+			reader = read(fd, buff, BUFFER_SIZE);
+			//printf("reader:%d\nbuffer:%s\n", reader, buff);
+			buff[reader] = '\0';
+			if (reader == -1)
+				return (-1);
+			newres = ft_strjoin(*res, buff);
+			free(*res);
+			*res = newres;
+			if (check_n(buff) != -1)
+				return (1);
 		}
-		i++;
-	}
-	if (check_read < BUFFER_SIZE)
-	{
-		str[check_read] = '\0';
 		return (0);
 	}
-	return (2);
+	return (-1);
 }
 
-int get_next_line(int fd, char **line)
+int	case_n(char **line, char **res)
 {
-	char	*buff;
-	int 	checkbuf;
-	int		check_read;
-	char	*res;
+	*line = to_line(*res);
+	*res = to_next_line(*res);
+	return (1);
+}
 
-	if (fd < 0 || line == NULL || BUFFER_SIZE <= 0 ||
-		(buff = malloc((BUFFER_SIZE + 1) * sizeof(char))) == NULL)
-		return (-1);	
-	res = malloc(sizeof(char));
-	if (res == NULL)
-	{
-		free(buff);
+int	get_next_line(int fd, char **line)
+{
+	char		*buff;
+	static char	*res;
+	int			out;
+
+	if (fd < 0 || line == NULL || BUFFER_SIZE < 1)
 		return (-1);
-	}
-	*res = '\0';
-	checkbuf = 2;
-	while (checkbuf == 2)
-	{
-		check_read = read(fd, buff, BUFFER_SIZE);
-		if (check_read == -1)
-		{
-			free(buff);
-			free(res);
-			return (-1);
-		}
-		buff[BUFFER_SIZE] = '\0';
-		checkbuf = is_end(buff, check_read); // -1 - ошибка чтения, 0 - символов меньше BUFF_SIZE, 1 - найден \n, 2 - символов BUFF_SIZE (продолжение цикла)
-		res = write_to_res(buff, res); // добавление buff в res (NULL - ошибка)
-		if (res == NULL)
-			checkbuf = -1;
-	//	printf("cb:%d - buff:%s\n", checkbuf, buff);
-	}
-	*line = res;
+	if (check_n(res) != -1)
+		return (case_n(line, &res));
+	buff = malloc(sizeof(char) * (BUFFER_SIZE + 1));
+	if (buff == NULL)
+		return (-1);
+	out = read_line(fd, buff, &res);
+	if (out == 0)
+		*line = res;
+	else if (out == 1)
+		out = case_n(line, &res);
 	free(buff);
-	return (checkbuf);
+	return (out);
 }
