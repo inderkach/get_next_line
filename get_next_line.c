@@ -12,13 +12,26 @@
 
 #include "get_next_line.h"
 
-char	*to_line(char *s)
+char	*to_line(char *s, int *status)
 {
 	char	*line;
 	size_t	n_s;
 
-	n_s = (size_t)check_n(s);
-	line = malloc(sizeof(char) * n_s);
+	if (s == NULL)
+		return (NULL);
+	if (check_n(s) != -1)
+	{
+		n_s = (size_t)check_n(s);
+		*status = 1;
+	}
+	else
+	{
+		n_s = ft_strlen(s);
+		*status = 0;
+	}
+	line = malloc(sizeof(char) * (n_s + 1));
+	if (line == NULL)
+		return (NULL);
 	line = ft_strcpy(line, s, n_s);
 	line[n_s] = '\0';
 	return (line);
@@ -29,14 +42,26 @@ char	*to_next_line(char *s)
 	size_t	i;
 	size_t	length;
 	char	*new;
-
-	i = (size_t)check_n(s) + 1;
-	length = 0;
-	while (s[i + length] != '\0')
-		length++;
+//	printf("cn:%d", check_n(s));
+	if ( s == NULL)
+		return (NULL);
+	if (check_n(s) != -1)
+		i = (size_t)check_n(s) + 1;
+	else
+		i = ft_strlen(s);
+	if (s[i] == '\0')
+	{
+		free(s);
+		return (0);
+	}
+	length = ft_strlen(s + i);
 	new = malloc(sizeof(char) * (length + 1));
-	new = ft_strcpy(new, (s + i), length + 1);
+	if (new == NULL)
+		return (NULL);
+	new = ft_strcpy(new, (s + i), length);
+	//printf("\nfree p=%p\n", s);
 	free(s);
+	
 	return (new);
 }
 
@@ -46,14 +71,13 @@ int	read_line(int fd, char *buff, char **res)
 	char	*newres;
 
 	*res = alloc(res);
-	
 	if (*res != NULL)
 	{
 		reader = BUFFER_SIZE;
 		while (reader == BUFFER_SIZE)
 		{
 			reader = read(fd, buff, BUFFER_SIZE);
-			//printf("reader:%d\nbuffer:%s\n", reader, buff);
+//			printf("reader:%d\nbuffer:%s\n", reader, buff);
 			buff[reader] = '\0';
 			if (reader == -1)
 				return (-1);
@@ -70,9 +94,13 @@ int	read_line(int fd, char *buff, char **res)
 
 int	case_n(char **line, char **res)
 {
-	*line = to_line(*res);
+	int	status;
+
+	*line = to_line(*res, &status);
 	*res = to_next_line(*res);
-	return (1);
+	if (*line == NULL)
+		return (-1);
+	return (status);
 }
 
 int	get_next_line(int fd, char **line)
@@ -83,16 +111,16 @@ int	get_next_line(int fd, char **line)
 
 	if (fd < 0 || line == NULL || BUFFER_SIZE < 1)
 		return (-1);
-	if (check_n(res) != -1)
-		return (case_n(line, &res));
-	buff = malloc(sizeof(char) * (BUFFER_SIZE + 1));
-	if (buff == NULL)
-		return (-1);
-	out = read_line(fd, buff, &res);
-	if (out == 0)
-		*line = res;
-	else if (out == 1)
+	out = 1;
+	if (check_n(res) == -1)
+	{	
+		buff = malloc(sizeof(char) * (BUFFER_SIZE + 1));
+		if (buff == NULL)
+			return (-1);
+		out = read_line(fd, buff, &res);
+		free(buff);
+	}
+	if (out != -1)
 		out = case_n(line, &res);
-	free(buff);
 	return (out);
 }
